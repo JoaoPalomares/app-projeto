@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
+import '../controller/auth_controller.dart';
+import '../core/dependencias.dart';
 import '../controller/adocao_controller.dart';
 import '../core/app_routes.dart';
 import '../core/app_tema.dart';
@@ -54,6 +55,7 @@ class AdocaoView extends StatelessWidget {
       appBar: AppBar(title: const Text('Portal de Adoção')),
       body: Column(
         children: [
+          const _SaudacaoUsuario(),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: Row(
@@ -468,6 +470,34 @@ class _SemResultados extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Saudação com o nome do usuário logado (atualiza quando o Perfil muda o nome).
+class _SaudacaoUsuario extends StatelessWidget {
+  const _SaudacaoUsuario();
+
+  @override
+  Widget build(BuildContext context) {
+    final auth = g<AuthController>();
+
+    return ListenableBuilder(
+      listenable: auth,
+      builder: (context, _) {
+        final nome = auth.usuarioLogado?.nome.split(' ').first ?? 'visitante';
+
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Olá, $nome! Encontre seu novo melhor amigo.',
+              style: const TextStyle(color: AppCores.textoSuave),
+            ),
+          ),
+        );
+      },
     );
   }
 }

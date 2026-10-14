@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../controller/triagem_controller.dart';
 import '../core/app_tema.dart';
+import '../core/telefone_input_formatter.dart';
 import '../model/animal_model.dart';
 
 class TriagemView extends StatelessWidget {
@@ -101,9 +101,7 @@ class TriagemView extends StatelessWidget {
                       textInputAction: TextInputAction.next,
                       validator: controller.validarTelefone,
                       inputFormatters: [
-                        FilteringTextInputFormatter.allow(
-                          RegExp(r'[0-9()\-\s+]'),
-                        ),
+                        TelefoneInputFormatter()
                       ],
                       decoration: const InputDecoration(
                         labelText: 'Telefone',

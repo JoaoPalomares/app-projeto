@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../controller/adocao_controller.dart';
+import '../controller/auth_controller.dart';
 import '../core/app_tema.dart';
+import '../core/dependencias.dart'; // onde está o `g`
 import 'adocao_view.dart';
+import 'introducao_modal.dart';
 import 'perfil_view.dart';
 
 /// Tela principal: guarda a barra de navegação inferior e as abas.
@@ -29,6 +32,20 @@ class _HomeViewState extends State<HomeView> {
     const _EmBreve(titulo: 'Pets Perdidos', icone: Icons.location_on),
     const PerfilView(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    // Espera o primeiro frame para ter um contexto pronto para o diálogo.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final auth = g<AuthController>();
+      if (!auth.introducaoVista) {
+        auth.introducaoVista = true;
+        mostrarIntroducao(context);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

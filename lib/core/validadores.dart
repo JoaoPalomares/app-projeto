@@ -9,9 +9,13 @@ class Validadores {
     r'^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$',
   );
 
-  static String? obrigatorio(String? valor, {String campo = 'Este campo'}) {
+  static String? obrigatorio(
+    String? valor, {
+    String campo = 'Este campo',
+    bool feminino = false,
+  }) {
     if (valor == null || valor.trim().isEmpty) {
-      return '$campo é obrigatório.';
+      return '$campo é ${feminino ? 'obrigatória' : 'obrigatório'}.';
     }
     return null;
   }
@@ -49,6 +53,29 @@ class Validadores {
     if (digitos.length < 10 || digitos.length > 11) {
       return 'Informe um telefone válido com DDD.';
     }
+    return null;
+  }
+
+  /// Senha de um novo cadastro: obrigatória e com tamanho mínimo.
+  static String? senha(String? valor, {int minimo = 6}) {
+    final vazio = obrigatorio(valor, campo: 'A senha', feminino: true);
+    if (vazio != null) return vazio;
+
+    if (valor!.length < minimo) {
+      return 'A senha deve ter pelo menos $minimo caracteres.';
+    }
+    return null;
+  }
+
+  static String? confirmacaoSenha(String? valor, String senha) {
+    final vazio = obrigatorio(
+      valor,
+      campo: 'A confirmação de senha',
+      feminino: true,
+    );
+    if (vazio != null) return vazio;
+
+    if (valor != senha) return 'As senhas não coincidem.';
     return null;
   }
 }

@@ -37,7 +37,7 @@ class MainApp extends StatelessWidget {
       title: 'Miaudote',
       theme: AppTema.claro,
       // Temporário. Depois do login pronto, volte para AppRoutes.login.
-      initialRoute: AppRoutes.home,
+      initialRoute: AppRoutes.login,
       routes: {
         AppRoutes.cadastrarUsuario: (context) => const CadastrarUsuarioView(),
         AppRoutes.home: (context) => const HomeView(),
