@@ -115,7 +115,7 @@ class _Passo extends StatelessWidget {
           width: 72,
           height: 72,
           decoration: BoxDecoration(
-            color: passo.cor.withOpacity(0.12),
+            color: passo.cor.withValues(alpha: 0.12),
             shape: BoxShape.circle,
           ),
           child: Icon(passo.icone, size: 36, color: passo.cor),
