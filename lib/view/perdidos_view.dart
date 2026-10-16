@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../controller/perdidos_controller.dart';
 import '../core/app_tema.dart';
 import '../core/dependencias.dart';
+import '../core/telefone_input_formatter.dart';
 
 class PerdidosView extends StatefulWidget {
   const PerdidosView({super.key});
@@ -154,8 +155,10 @@ class _PerdidosViewState extends State<PerdidosView> {
                     TextFormField(
                       controller: _contatoCtrl,
                       keyboardType: TextInputType.phone,
+                      inputFormatters: [TelefoneInputFormatter()],
                       decoration: const InputDecoration(
                         labelText: 'Telefone para contato',
+                        hintText: '(00) 00000-0000',
                         prefixIcon: Icon(Icons.phone_outlined),
                       ),
                       validator: _controller.validarContato,

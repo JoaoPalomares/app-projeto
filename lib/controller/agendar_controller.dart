@@ -10,6 +10,17 @@ class AgendarController extends ChangeNotifier {
     'Castração',
   ];
 
+  // Horários fixos de atendimento (a cada 30 minutos).
+  static final List<TimeOfDay> horariosManha = _gerarHorarios(8, 0, 8);
+  static final List<TimeOfDay> horariosTarde = _gerarHorarios(13, 30, 9);
+
+  static List<TimeOfDay> _gerarHorarios(int hora, int minuto, int quantidade) {
+    return List.generate(quantidade, (i) {
+      final total = hora * 60 + minuto + i * 30;
+      return TimeOfDay(hour: total ~/ 60, minute: total % 60);
+    });
+  }
+
   final List<AgendamentoModel> _agendamentos = [];
 
   /// Ordenados do mais próximo para o mais distante.
@@ -17,6 +28,34 @@ class AgendarController extends ChangeNotifier {
     final copia = List<AgendamentoModel>.from(_agendamentos);
     copia.sort((a, b) => a.dataHora.compareTo(b.dataHora));
     return List.unmodifiable(copia);
+  }
+
+  /// A clínica só atende de segunda a sexta.
+  bool diaUtil(DateTime dia) =>
+      dia.weekday != DateTime.saturday && dia.weekday != DateTime.sunday;
+
+  /// Primeiro dia útil a partir de [data] (inclusive).
+  DateTime primeiroDiaUtil(DateTime data) {
+    var dia = DateTime(data.year, data.month, data.day);
+    while (!diaUtil(dia)) {
+      dia = dia.add(const Duration(days: 1));
+    }
+    return dia;
+  }
+
+  /// Horário indisponível: já passou, já foi agendado por você
+  /// ou está ocupado por outro cliente (simulado para a demonstração).
+  bool horarioIndisponivel(DateTime dia, TimeOfDay hora) {
+    final inicio = combinar(dia, hora);
+    if (!inicio.isAfter(DateTime.now())) return true;
+    if (_ocupadoPorOutros(dia, hora)) return true;
+    return _agendamentos.any((a) => a.dataHora.isAtSameMomentAs(inicio));
+  }
+
+  // Simula agendamentos de outros clientes (cerca de 1 horário em cada 4).
+  bool _ocupadoPorOutros(DateTime dia, TimeOfDay hora) {
+    final indice = (hora.hour * 60 + hora.minute - 8 * 60) ~/ 30;
+    return (dia.day + dia.month + indice) % 6 == 0;
   }
 
   String? validarNomePet(String? valor) {
