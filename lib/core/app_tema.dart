@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 /// Cores extraídas do protótipo do Miaudote (Engenharia de Software II).
 class AppCores {
@@ -30,6 +31,24 @@ class AppTema {
         secondary: AppCores.verde,
       ),
       scaffoldBackgroundColor: AppCores.fundo,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: AppCores.coral,
+        foregroundColor: Colors.white, // título, seta de voltar e ícones
+        surfaceTintColor: Colors.transparent, // evita o "clareamento" do M3
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        systemOverlayStyle: SystemUiOverlayStyle.light, // barra de status clara
+      ),
+      // Bottom sheets (detalhe do animal, filtros) e diálogos (introdução,
+      // triagem) em branco, sem o tom rosado do Material 3.
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+      ),
+      dialogTheme: const DialogThemeData(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+      ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: Colors.white,

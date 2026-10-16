@@ -100,9 +100,7 @@ class TriagemView extends StatelessWidget {
                       keyboardType: TextInputType.phone,
                       textInputAction: TextInputAction.next,
                       validator: controller.validarTelefone,
-                      inputFormatters: [
-                        TelefoneInputFormatter()
-                      ],
+                      inputFormatters: [TelefoneInputFormatter()],
                       decoration: const InputDecoration(
                         labelText: 'Telefone',
                         hintText: '(00) 00000-0000',
@@ -218,13 +216,26 @@ class _ResumoAnimal extends StatelessWidget {
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 28,
-            backgroundColor:
-                gato ? const Color(0xFFD9F2EF) : const Color(0xFFFBE3DC),
-            child: Icon(
-              Icons.pets,
-              color: gato ? AppCores.verde : AppCores.coral,
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: SizedBox(
+              width: 72,
+              height: 72,
+              child: Image.asset(
+                animal.imagem!,
+                fit: BoxFit.cover,
+                semanticLabel: 'Foto de ${animal.nome}',
+                // Se a foto não carregar, mostra o ícone como antes.
+                errorBuilder: (context, error, stackTrace) => Container(
+                  color: gato
+                      ? const Color(0xFFD9F2EF)
+                      : const Color(0xFFFBE3DC),
+                  child: Icon(
+                    Icons.pets,
+                    color: gato ? AppCores.verde : AppCores.coral,
+                  ),
+                ),
+              ),
             ),
           ),
           const SizedBox(width: 12),

@@ -24,7 +24,7 @@ class LogoMiaudote extends StatelessWidget {
         widthFactor: _fatorLargura,
         heightFactor: _fatorAltura,
         child: Image.asset(
-          'assets/images/logo-miaudote.jpg',
+          'assets/images/logo-miaudote.png',
           width: larguraImagem,
           semanticLabel: 'Logotipo do Miaudote',
           // Se o arquivo não for encontrado, mostra um coração no lugar.

@@ -19,12 +19,15 @@ class _PerfilViewState extends State<PerfilView> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nomeController;
 
-  // Reconstrói a tela quando o usuário ou o estado de "salvando" mudam.
+  // Reconstrói a tela quando o usuário ou o estado do controller mudam.
   late final Listenable _ouvintes = Listenable.merge([_auth, _controller]);
 
   @override
   void initState() {
     super.initState();
+    // O controller é singleton: garante que a tela sempre abre em
+    // modo de visualização.
+    _controller.reiniciar();
     _nomeController = TextEditingController(
       text: _auth.usuarioLogado?.nome ?? '',
     );
@@ -36,11 +39,16 @@ class _PerfilViewState extends State<PerfilView> {
     super.dispose();
   }
 
+  void _editar() {
+    _nomeController.text = _auth.usuarioLogado?.nome ?? '';
+    _controller.iniciarEdicao();
+  }
+
   Future<void> _salvar() async {
     FocusScope.of(context).unfocus();
 
     // Nome vazio ou curto demais: o Form mostra o erro no campo.
-    if (!_formKey.currentState!.validate()) return;
+    if (!(_formKey.currentState?.validate() ?? false)) return;
 
     await _controller.salvar(_nomeController.text);
     if (!mounted) return;
@@ -52,9 +60,8 @@ class _PerfilViewState extends State<PerfilView> {
 
   void _cancelar() {
     FocusScope.of(context).unfocus();
-    // Limpa os erros e volta o campo para o nome que está salvo.
-    _formKey.currentState?.reset();
     _nomeController.text = _auth.usuarioLogado?.nome ?? '';
+    _controller.cancelarEdicao();
   }
 
   void _sair() {
@@ -80,6 +87,7 @@ class _PerfilViewState extends State<PerfilView> {
 
           final nome = usuario.nome.trim();
           final inicial = nome.isEmpty ? '?' : nome[0].toUpperCase();
+          final editando = _controller.editando;
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(24),
@@ -104,6 +112,7 @@ class _PerfilViewState extends State<PerfilView> {
                       ),
                     ),
                     const SizedBox(height: 12),
+                    // Nome e e-mail em texto normal (modo de visualização).
                     Text(
                       usuario.nome,
                       textAlign: TextAlign.center,
@@ -119,67 +128,78 @@ class _PerfilViewState extends State<PerfilView> {
                       style: const TextStyle(color: AppCores.textoSuave),
                     ),
                     const SizedBox(height: 28),
-                    Form(
-                      key: _formKey,
-                      autovalidateMode: AutovalidateMode.onUserInteraction,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          TextFormField(
-                            controller: _nomeController,
-                            textCapitalization: TextCapitalization.words,
-                            textInputAction: TextInputAction.done,
-                            onFieldSubmitted: (_) => _salvar(),
-                            validator: _controller.validarNome,
-                            decoration: const InputDecoration(
-                              labelText: 'Nome',
-                              prefixIcon: Icon(Icons.person_outline),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          // E-mail: somente visualização (não pode ser alterado).
-                          TextFormField(
-                            initialValue: usuario.email,
-                            readOnly: true,
-                            decoration: const InputDecoration(
-                              labelText: 'E-mail',
-                              helperText:
-                                  'O e-mail de acesso não pode ser alterado.',
-                              prefixIcon: Icon(Icons.mail_outline),
-                              suffixIcon: Icon(Icons.lock_outline),
-                              fillColor: Color(0xFFF3F4F6),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    FilledButton(
-                      onPressed: _controller.salvando ? null : _salvar,
-                      child: _controller.salvando
-                          ? const SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.5,
-                                color: Colors.white,
+
+                    // Os campos só aparecem depois de clicar em "Editar".
+                    if (editando) ...[
+                      Form(
+                        key: _formKey,
+                        autovalidateMode: AutovalidateMode.onUserInteraction,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            TextFormField(
+                              controller: _nomeController,
+                              autofocus: true,
+                              textCapitalization: TextCapitalization.words,
+                              textInputAction: TextInputAction.done,
+                              onFieldSubmitted: (_) => _salvar(),
+                              validator: _controller.validarNome,
+                              decoration: const InputDecoration(
+                                labelText: 'Nome',
+                                prefixIcon: Icon(Icons.person_outline),
                               ),
-                            )
-                          : const Text('Salvar alterações'),
-                    ),
-                    const SizedBox(height: 12),
-                    OutlinedButton(
-                      onPressed: _controller.salvando ? null : _cancelar,
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(52),
-                        foregroundColor: AppCores.verde,
-                        side: const BorderSide(color: AppCores.verde),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                            ),
+                            const SizedBox(height: 16),
+                            // E-mail: somente visualização (não pode ser alterado).
+                            TextFormField(
+                              initialValue: usuario.email,
+                              readOnly: true,
+                              decoration: const InputDecoration(
+                                labelText: 'E-mail',
+                                helperText:
+                                    'O e-mail de acesso não pode ser alterado.',
+                                prefixIcon: Icon(Icons.mail_outline),
+                                suffixIcon: Icon(Icons.lock_outline),
+                                fillColor: Color(0xFFF3F4F6),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      child: const Text('Cancelar'),
-                    ),
+                      const SizedBox(height: 24),
+                      FilledButton(
+                        onPressed: _controller.salvando ? null : _salvar,
+                        child: _controller.salvando
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text('Salvar alterações'),
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton(
+                        onPressed: _controller.salvando ? null : _cancelar,
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(52),
+                          foregroundColor: AppCores.verde,
+                          side: const BorderSide(color: AppCores.verde),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text('Cancelar'),
+                      ),
+                    ] else
+                      FilledButton.icon(
+                        onPressed: _editar,
+                        icon: const Icon(Icons.edit_outlined),
+                        label: const Text('Editar'),
+                      ),
+
                     const SizedBox(height: 16),
                     const Divider(),
                     ListTile(

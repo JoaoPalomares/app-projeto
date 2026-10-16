@@ -58,31 +58,31 @@ class _HomeViewState extends State<HomeView> {
         selectedIndex: _indice,
         onDestinationSelected: (indice) => setState(() => _indice = indice),
         backgroundColor: Colors.white,
-        indicatorColor: const Color(0xFFFBE3DC),
+        indicatorColor: const Color.fromARGB(255, 224, 255, 255),
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.favorite_border),
-            selectedIcon: Icon(Icons.favorite, color: AppCores.coral),
+            selectedIcon: Icon(Icons.favorite, color: AppCores.verde),
             label: 'Adoção',
           ),
           NavigationDestination(
             icon: Icon(Icons.pets_outlined),
-            selectedIcon: Icon(Icons.pets, color: AppCores.coral),
+            selectedIcon: Icon(Icons.pets, color: AppCores.verde),
             label: 'Meu Pet',
           ),
           NavigationDestination(
             icon: Icon(Icons.calendar_month_outlined),
-            selectedIcon: Icon(Icons.calendar_month, color: AppCores.coral),
+            selectedIcon: Icon(Icons.calendar_month, color: AppCores.verde),
             label: 'Agendar',
           ),
           NavigationDestination(
             icon: Icon(Icons.location_on_outlined),
-            selectedIcon: Icon(Icons.location_on, color: AppCores.coral),
+            selectedIcon: Icon(Icons.location_on, color: AppCores.verde),
             label: 'Perdidos',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person, color: AppCores.coral),
+            selectedIcon: Icon(Icons.person, color: AppCores.verde),
             label: 'Perfil',
           ),
         ],
