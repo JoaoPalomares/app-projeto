@@ -16,8 +16,8 @@ class SobreController extends ChangeNotifier {
     'João Pedro Palomares',
   ];
 
-  final String disciplina = 'Dispositivos Móveis';
+  final String disciplina = 'Programação para Dispositivos Móveis';
   final String curso = 'Análise e Desenvolvimento de Sistemas';
   final String instituicao = 'FATEC Ribeirão Preto';
-  final String professor = 'Plotze';
+  final String professor = 'Rodrigo de Oliveira Plotze';
 }
