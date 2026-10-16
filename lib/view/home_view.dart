@@ -8,6 +8,9 @@ import '../core/dependencias.dart'; // onde está o `g`
 import 'adocao_view.dart';
 import 'introducao_modal.dart';
 import 'perfil_view.dart';
+import 'agendamento_view.dart';
+import 'meu_pet_view.dart';
+import 'perdidos_view.dart';
 
 /// Tela principal: guarda a barra de navegação inferior e as abas.
 class HomeView extends StatefulWidget {
@@ -23,15 +26,15 @@ class _HomeViewState extends State<HomeView> {
   // Criadas uma única vez. O IndexedStack mantém cada aba "viva", então a
   // busca e os filtros da Adoção não se perdem ao trocar de aba.
   late final List<Widget> _abas = [
-    ChangeNotifierProvider(
-      create: (_) => AdocaoController(),
-      child: const AdocaoView(),
-    ),
-    const _EmBreve(titulo: 'Meu Pet', icone: Icons.pets),
-    const _EmBreve(titulo: 'Agendamentos', icone: Icons.calendar_month),
-    const _EmBreve(titulo: 'Pets Perdidos', icone: Icons.location_on),
-    const PerfilView(),
-  ];
+  ChangeNotifierProvider(
+    create: (_) => AdocaoController(),
+    child: const AdocaoView(),
+  ),
+  const MeuPetView(),
+  const AgendarView(),
+  const PerdidosView(),
+  const PerfilView(),
+];
 
   @override
   void initState() {
@@ -83,31 +86,6 @@ class _HomeViewState extends State<HomeView> {
             label: 'Perfil',
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// Aba provisória, até a tela real existir. Troque na lista `_abas`.
-class _EmBreve extends StatelessWidget {
-  const _EmBreve({required this.titulo, required this.icone});
-
-  final String titulo;
-  final IconData icone;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(titulo)),
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icone, size: 64, color: AppCores.borda),
-            const SizedBox(height: 12),
-            const Text('Tela em construção'),
-          ],
-        ),
       ),
     );
   }
