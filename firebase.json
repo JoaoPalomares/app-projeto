@@ -1,0 +1,37 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "miaudote-ads",
+          "appId": "1:346850975857:android:4d70b2c0821df9f03fbbd0",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "miaudote-ads",
+          "configurations": {
+            "android": "1:346850975857:android:4d70b2c0821df9f03fbbd0",
+            "ios": "1:346850975857:ios:19ad49fddc2047553fbbd0",
+            "web": "1:346850975857:web:4660f0c60bacbb063fbbd0"
+          }
+        }
+      }
+    }
+  },
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}

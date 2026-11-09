@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "346850975857",
+    "project_id": "miaudote-ads",
+    "storage_bucket": "miaudote-ads.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:346850975857:android:4d70b2c0821df9f03fbbd0",
+        "android_client_info": {
+          "package_name": "com.example.app_projeto"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCwqEYMgzAsnOQygQxfKZkLRMgQDtzR4pU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

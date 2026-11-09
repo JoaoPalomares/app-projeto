@@ -17,12 +17,24 @@ import 'view/perfil_view.dart';
 import 'view/recuperar_senha_view.dart';
 import 'view/sobre_view.dart';
 
-void main() {
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart' show kReleaseMode;
+
+import 'firebase_options.dart';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   configurarDependencias();
 
   runApp(
     DevicePreview(
-      enabled: true,
+      // Moldura de celular só no desenvolvimento. Na versão publicada
+      // (release) ela some, e o app ocupa a tela real do celular.
+      enabled: !kReleaseMode,
       builder: (context) => const MainApp(),
     ),
   );
