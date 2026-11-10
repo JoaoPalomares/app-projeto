@@ -1,6 +1,7 @@
 import 'package:provider/provider.dart';
 
 import 'controller/triagem_controller.dart';
+import 'controller/auth_controller.dart';
 import 'model/animal_model.dart';
 import 'view/triagem_view.dart';
 
@@ -29,6 +30,7 @@ Future<void> main() async {
   );
 
   configurarDependencias();
+  await g<AuthController>().restaurarSessao();
 
   runApp(
     DevicePreview(
@@ -50,7 +52,9 @@ class MainApp extends StatelessWidget {
       title: 'Miaudote',
       theme: AppTema.claro,
       // Temporário. Depois do login pronto, volte para AppRoutes.login.
-      initialRoute: AppRoutes.login,
+      initialRoute: g<AuthController>().autenticado
+        ? AppRoutes.home
+        : AppRoutes.login,
       routes: {
         AppRoutes.cadastrarUsuario: (context) => const CadastrarUsuarioView(),
         AppRoutes.home: (context) => const HomeView(),

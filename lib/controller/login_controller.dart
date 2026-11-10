@@ -28,20 +28,33 @@ class LoginController extends ChangeNotifier {
   String? validarSenha(String? valor) =>
       Validadores.obrigatorio(valor, campo: 'A senha', feminino: true);
 
-  /// Tenta autenticar. Retorna `true` se as credenciais estiverem corretas.
+    /// Tenta autenticar. Retorna `true` se as credenciais estiverem corretas.
   Future<bool> entrar(String email, String senha) async {
     _erro = null;
     _carregando = true;
     notifyListeners();
 
-    final autenticado = await _auth.login(email, senha);
+    final erro = await _auth.login(email, senha);
 
     _carregando = false;
-    if (!autenticado) {
-      _erro = 'E-mail ou senha incorretos.';
-    }
+    _erro = erro;
     notifyListeners();
-    return autenticado;
+    return erro == null;
+  }
+
+    /// Login com Google. Retorna `true` só se o usuário realmente entrou
+  /// (fechar o popup não conta como erro nem como login).
+  Future<bool> entrarComGoogle() async {
+    _erro = null;
+    _carregando = true;
+    notifyListeners();
+
+    final erro = await _auth.loginComGoogle();
+
+    _carregando = false;
+    _erro = erro;
+    notifyListeners();
+    return erro == null && _auth.autenticado;
   }
 
   /// Como o controller é singleton, a tela chama isto ao abrir para limpar

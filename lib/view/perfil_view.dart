@@ -50,11 +50,11 @@ class _PerfilViewState extends State<PerfilView> {
     // Nome vazio ou curto demais: o Form mostra o erro no campo.
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
-    await _controller.salvar(_nomeController.text);
+    final erro = await _controller.salvar(_nomeController.text);
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Perfil atualizado com sucesso!')),
+      SnackBar(content: Text(erro ?? 'Perfil atualizado com sucesso!')),
     );
   }
 

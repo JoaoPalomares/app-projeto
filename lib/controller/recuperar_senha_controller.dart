@@ -20,21 +20,19 @@ class RecuperarSenhaController extends ChangeNotifier {
 
   /// Simula o envio das instruções de redefinição.
   /// Retorna `true` se o e-mail estiver associado a uma conta cadastrada.
+    /// Pede ao Firebase o envio do e-mail de redefinição de senha.
+  /// Retorna `true` se o pedido foi aceito.
   Future<bool> solicitar(String email) async {
     _erro = null;
     _carregando = true;
     notifyListeners();
 
-    // Simula o envio do e-mail pela API.
-    await Future.delayed(const Duration(milliseconds: 800));
-    final cadastrado = _auth.emailCadastrado(email);
+    final erro = await _auth.enviarRedefinicaoSenha(email);
 
     _carregando = false;
-    if (!cadastrado) {
-      _erro = 'Não encontramos uma conta cadastrada com este e-mail.';
-    }
+    _erro = erro;
     notifyListeners();
-    return cadastrado;
+    return erro == null;
   }
 
   /// Limpa o estado da visita anterior (controller singleton).

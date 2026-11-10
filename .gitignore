@@ -47,4 +47,4 @@ app.*.map.json
 # Widget Preview related
 .widget_preview/
 
-lib/firebase_options.dart
+lib/firebase_options.dart".firebase/" 

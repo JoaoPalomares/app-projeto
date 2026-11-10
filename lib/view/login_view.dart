@@ -48,6 +48,16 @@ class _LoginViewState extends State<LoginView> {
     }
   }
 
+  Future<void> _entrarComGoogle() async {
+    FocusScope.of(context).unfocus();
+
+    final autenticado = await _controller.entrarComGoogle();
+
+    if (autenticado && mounted) {
+      Navigator.pushReplacementNamed(context, AppRoutes.home);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -116,7 +126,8 @@ class _LoginViewState extends State<LoginView> {
                                       ? Icons.visibility_outlined
                                       : Icons.visibility_off_outlined,
                                 ),
-                                onPressed: _controller.alternarVisibilidadeSenha,
+                                onPressed:
+                                    _controller.alternarVisibilidadeSenha,
                               ),
                             ),
                           ),
@@ -135,8 +146,7 @@ class _LoginViewState extends State<LoginView> {
                             const SizedBox(height: 12),
                           ],
                           FilledButton(
-                            onPressed:
-                                _controller.carregando ? null : _entrar,
+                            onPressed: _controller.carregando ? null : _entrar,
                             child: _controller.carregando
                                 ? const SizedBox(
                                     width: 22,
@@ -147,6 +157,39 @@ class _LoginViewState extends State<LoginView> {
                                     ),
                                   )
                                 : const Text('Entrar'),
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: const [
+                              Expanded(child: Divider()),
+                              Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 12),
+                                child: Text(
+                                  'ou',
+                                  style: TextStyle(color: AppCores.textoSuave),
+                                ),
+                              ),
+                              Expanded(child: Divider()),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          OutlinedButton.icon(
+                            onPressed: _controller.carregando
+                                ? null
+                                : _entrarComGoogle,
+                            icon: Image.asset(
+                              'assets/images/pesquisa.png',
+                              width: 20,
+                              height: 20,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  const Icon(Icons.login),
+                            ),
+                            label: const Text('Continuar com o Google'),
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size.fromHeight(48),
+                              foregroundColor: AppCores.texto,
+                              side: const BorderSide(color: Color(0xFFE0E0E0)),
+                            ),
                           ),
                           const SizedBox(height: 20),
                           Row(

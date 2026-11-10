@@ -42,8 +42,8 @@ class CadastrarUsuarioController extends ChangeNotifier {
   String? validarConfirmacao(String? valor, String senha) =>
       Validadores.confirmacaoSenha(valor, senha);
 
-  /// Cria a conta e já deixa o usuário logado.
-  /// Retorna `false` se o e-mail já estiver cadastrado.
+    /// Cria a conta e já deixa o usuário logado.
+  /// Retorna `true` se o cadastro foi concluído.
   Future<bool> cadastrar({
     required String nome,
     required String email,
@@ -54,7 +54,7 @@ class CadastrarUsuarioController extends ChangeNotifier {
     _carregando = true;
     notifyListeners();
 
-    final criado = await _auth.cadastrar(
+    final erro = await _auth.cadastrar(
       nome: nome,
       email: email,
       telefone: telefone,
@@ -62,11 +62,9 @@ class CadastrarUsuarioController extends ChangeNotifier {
     );
 
     _carregando = false;
-    if (!criado) {
-      _erro = 'Este e-mail já está cadastrado.';
-    }
+    _erro = erro;
     notifyListeners();
-    return criado;
+    return erro == null;
   }
 
   /// Limpa o estado da visita anterior (controller singleton).

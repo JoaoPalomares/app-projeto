@@ -50,7 +50,8 @@ class _RecuperarSenhaViewState extends State<RecuperarSenhaView> {
         ),
         title: const Text('Verifique seu e-mail'),
         content: Text(
-          'Enviamos as instruções para redefinir sua senha para $email.',
+          'Se existir uma conta para $email, enviamos as instruções para '
+          'redefinir a senha. Confira também a caixa de spam.',
         ),
         actions: [
           TextButton(

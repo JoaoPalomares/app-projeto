@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../core/validadores.dart';
+import '../model/usuario_model.dart';
 import 'auth_controller.dart';
 
-/// Estado e regras da tela de Perfil do Usuário (RF005).
+/// Estado da tela de Perfil (RF005): alterna entre visualização e edição.
 class PerfilController extends ChangeNotifier {
   PerfilController(this._auth);
 
@@ -14,6 +15,7 @@ class PerfilController extends ChangeNotifier {
 
   bool get salvando => _salvando;
   bool get editando => _editando;
+  Usuario? get usuario => _auth.usuarioLogado;
 
   /// Volta ao modo de visualização sem notificar (chamado no initState).
   void reiniciar() => _editando = false;
@@ -28,25 +30,22 @@ class PerfilController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Validações do nome (1 e 2 do RF005): preenchido e com tamanho mínimo.
   String? validarNome(String? valor) =>
       Validadores.tamanhoMinimo(valor, 3, campo: 'O nome');
 
-  /// Atualiza o nome do usuário logado e volta ao modo de visualização.
-  /// O novo nome passa a ser usado pelas telas que identificam o usuário
-  /// (elas ouvem o `AuthController`).
-  Future<void> salvar(String nome) async {
-    if (!_auth.autenticado) return;
+  /// Grava o novo nome no Firestore. Retorna `null` em caso de sucesso,
+  /// ou a mensagem de erro (a tela continua em modo de edição).
+  Future<String?> salvar(String nome) async {
+    if (!_auth.autenticado) return 'Sessão expirada. Entre novamente.';
 
     _salvando = true;
     notifyListeners();
 
-    // Simula a chamada à API.
-    await Future.delayed(const Duration(milliseconds: 500));
-    _auth.atualizarNome(nome);
+    final erro = await _auth.atualizarNome(nome);
 
     _salvando = false;
-    _editando = false;
+    if (erro == null) _editando = false;
     notifyListeners();
+    return erro;
   }
 }
