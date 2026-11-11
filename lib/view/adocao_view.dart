@@ -66,7 +66,7 @@ class AdocaoView extends StatelessWidget {
                     onChanged: controller.buscarPorNome,
                     textInputAction: TextInputAction.search,
                     decoration: const InputDecoration(
-                      hintText: 'Buscar por nome...',
+                      hintText: 'Buscar por nome, espécie ou raça',
                       prefixIcon: Icon(Icons.search),
                     ),
                   ),
