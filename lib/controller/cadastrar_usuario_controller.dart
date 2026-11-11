@@ -37,7 +37,7 @@ class CadastrarUsuarioController extends ChangeNotifier {
 
   String? validarTelefone(String? valor) => Validadores.telefone(valor);
 
-  String? validarSenha(String? valor) => Validadores.senha(valor);
+  String? validarSenha(String? valor) => Validadores.senhaForte(valor);
 
   String? validarConfirmacao(String? valor, String senha) =>
       Validadores.confirmacaoSenha(valor, senha);

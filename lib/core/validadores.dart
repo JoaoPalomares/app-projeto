@@ -67,6 +67,17 @@ class Validadores {
     return null;
   }
 
+   static String? senhaForte(String? valor) {
+    final senha = valor ?? '';
+    if (senha.isEmpty) return 'Informe a senha.';
+    if (senha.length < 8) return 'Use no mínimo 8 caracteres.';
+    if (!RegExp(r'[A-Z]').hasMatch(senha)) return 'Use ao menos uma letra maiúscula.';
+    if (!RegExp(r'[a-z]').hasMatch(senha)) return 'Use ao menos uma letra minúscula.';
+    if (!RegExp(r'\d').hasMatch(senha)) return 'Use ao menos um número.';
+    if (!RegExp(r'[^A-Za-z0-9]').hasMatch(senha)) return 'Use ao menos um símbolo.';
+    return null;
+  }
+
   static String? confirmacaoSenha(String? valor, String senha) {
     final vazio = obrigatorio(
       valor,

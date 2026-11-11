@@ -41,7 +41,10 @@ class AuthController extends ChangeNotifier {
     try {
       final doc = await _docUsuario(user.uid).get().timeout(_limite);
       dados = doc.data();
-    } catch (_) {
+    } catch (e) {
+      // Não mostramos nada ao usuário, mas o erro precisa aparecer no console
+      // (regra de segurança errada, sem internet, timeout...).
+      debugPrint('Falha ao ler usuarios/${user.uid}: $e');
       dados = null;
     }
 
@@ -70,7 +73,7 @@ class AuthController extends ChangeNotifier {
     }
   }
 
-    /// Login com a conta Google. Retorna `null` em caso de sucesso
+  /// Login com a conta Google. Retorna `null` em caso de sucesso
   /// (ou se o usuário apenas fechou o popup), ou a mensagem de erro.
   Future<String?> loginComGoogle() async {
     try {
@@ -152,7 +155,8 @@ class AuthController extends ChangeNotifier {
       return null;
     } on FirebaseAuthException catch (e) {
       return _mensagemErro(e);
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Falha ao gravar usuarios/${novo?.uid} no cadastro: $e');
       // A conta chegou a ser criada, mas o perfil não foi salvo: desfaz a conta
       // para o usuário não ficar com um cadastro pela metade.
       try {
@@ -213,7 +217,9 @@ class AuthController extends ChangeNotifier {
       case 'email-already-in-use':
         return 'Este e-mail já está cadastrado.';
       case 'weak-password':
-        return 'A senha é muito fraca. Use ao menos 6 caracteres.';
+      case 'password-does-not-meet-requirements':
+        return 'Senha fraca. Use ao menos 8 caracteres, com letra maiúscula, '
+            'minúscula, número e símbolo.';
       case 'too-many-requests':
         return 'Muitas tentativas. Aguarde um pouco e tente de novo.';
       case 'network-request-failed':
