@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../controller/agendar_controller.dart';
 import '../core/app_tema.dart';
 import '../core/dependencias.dart';
+import '../model/agendamento_model.dart';
 
 class AgendarView extends StatefulWidget {
   const AgendarView({super.key});
@@ -21,6 +22,11 @@ class _AgendarViewState extends State<AgendarView> {
   DateTime? _data;
   TimeOfDay? _hora;
   String? _erroDataHora;
+  bool _salvando = false;
+
+  // Stream dos agendamentos do usuário (RF004). Recriada no "Tentar novamente".
+  late Stream<List<AgendamentoModel>> _stream =
+      _controller.streamAgendamentos();
 
   static const _diasSemana = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
@@ -37,6 +43,10 @@ class _AgendarViewState extends State<AgendarView> {
   String _formatarHora(TimeOfDay h) => '${_dois(h.hour)}:${_dois(h.minute)}';
   String _rotuloData(DateTime d) =>
       '${_diasSemana[d.weekday - 1]}, ${_formatarData(d)}';
+
+  void _mostrarMensagem(String texto) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texto)));
+  }
 
   Future<void> _escolherData() async {
     final agora = DateTime.now();
@@ -61,21 +71,31 @@ class _AgendarViewState extends State<AgendarView> {
     }
   }
 
-  void _enviar() {
+  /// RF003: grava no Firestore e informa sucesso ou erro.
+  Future<void> _enviar() async {
+    FocusScope.of(context).unfocus();
     final formOk = _formKey.currentState!.validate();
     final erro = _controller.validarDataHora(_data, _hora);
     setState(() => _erroDataHora = erro);
     if (!formOk || erro != null) return;
 
-    _controller.agendar(
+    setState(() => _salvando = true);
+    final falha = await _controller.agendar(
       nomePet: _nomePetCtrl.text,
       servico: _servico!,
       data: _data!,
       hora: _hora!,
       observacao: _obsCtrl.text,
     );
+    if (!mounted) return;
+    setState(() => _salvando = false);
 
-    _formKey.currentState!.reset();
+    if (falha != null) {
+      _mostrarMensagem(falha);
+      return;
+    }
+
+    _formKey.currentState?.reset();
     _nomePetCtrl.clear();
     _obsCtrl.clear();
     setState(() {
@@ -84,8 +104,155 @@ class _AgendarViewState extends State<AgendarView> {
       _hora = null;
       _erroDataHora = null;
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Agendamento realizado com sucesso')),
+    _mostrarMensagem('Agendamento realizado com sucesso');
+  }
+
+  Future<void> _cancelar(String id) async {
+    final erro = await _controller.cancelar(id);
+    if (!mounted) return;
+    _mostrarMensagem(erro ?? 'Agendamento cancelado');
+  }
+
+  /// Aviso exibido no lugar da lista (carregando, erro ou lista vazia).
+  Widget? _aviso(AsyncSnapshot<List<AgendamentoModel>> snapshot) {
+    if (snapshot.hasError) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        child: Column(
+          children: [
+            const Text(
+              'Não foi possível carregar seus agendamentos.',
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            FilledButton(
+              onPressed: () =>
+                  setState(() => _stream = _controller.streamAgendamentos()),
+              child: const Text('Tentar novamente'),
+            ),
+          ],
+        ),
+      );
+    }
+    if (!snapshot.hasData) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 24),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (snapshot.data!.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 24),
+        child: Center(child: Text('Nenhum agendamento ainda')),
+      );
+    }
+    return null;
+  }
+
+  Widget _formulario(List<AgendamentoModel> meus) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TextFormField(
+                controller: _nomePetCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Nome do pet',
+                  prefixIcon: Icon(Icons.pets),
+                ),
+                validator: _controller.validarNomePet,
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: _servico,
+                decoration: const InputDecoration(
+                  labelText: 'Serviço',
+                  prefixIcon: Icon(Icons.medical_services_outlined),
+                ),
+                items: AgendarController.servicos
+                    .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                    .toList(),
+                onChanged: (v) => setState(() => _servico = v),
+                validator: _controller.validarServico,
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _escolherData,
+                icon: const Icon(Icons.calendar_month),
+                label: Text(
+                  _data == null
+                      ? 'Escolha a data (segunda a sexta)'
+                      : _rotuloData(_data!),
+                ),
+              ),
+              const SizedBox(height: 16),
+              _secaoHorarios(meus),
+              if (_erroDataHora != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6, left: 12),
+                  child: Text(
+                    _erroDataHora!,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _obsCtrl,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  labelText: 'Observação (opcional)',
+                  prefixIcon: Icon(Icons.notes),
+                ),
+              ),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: _salvando ? null : _enviar,
+                icon: _salvando
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.event_available),
+                label: const Text('Agendar'),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        Text(
+          'Meus agendamentos',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+
+  Widget _cartaoAgendamento(AgendamentoModel a) {
+    return Card(
+      child: ListTile(
+        leading: const Icon(Icons.event, color: AppCores.coral),
+        title: Text('${a.servico} • ${a.nomePet}'),
+        subtitle: Text(
+          '${_formatarData(a.dataHora)} às '
+          '${_formatarHora(TimeOfDay.fromDateTime(a.dataHora))}'
+          '${a.observacao.isEmpty ? '' : '\n${a.observacao}'}',
+        ),
+        isThreeLine: a.observacao.isNotEmpty,
+        trailing: IconButton(
+          tooltip: 'Cancelar',
+          icon: const Icon(Icons.delete_outline),
+          onPressed: () => _cancelar(a.id),
+        ),
+      ),
     );
   }
 
@@ -93,114 +260,22 @@ class _AgendarViewState extends State<AgendarView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Agendar')),
-      body: ListenableBuilder(
-        listenable: _controller,
-        builder: (context, _) {
-          final lista = _controller.agendamentos;
-          return ListView(
+      // RF004: StreamBuilder + ListView em tempo real. O item 0 é o formulário.
+      body: StreamBuilder<List<AgendamentoModel>>(
+        stream: _stream,
+        builder: (context, snapshot) {
+          final lista = snapshot.data ?? const <AgendamentoModel>[];
+          final aviso = _aviso(snapshot);
+          final quantidade = aviso == null ? lista.length : 1;
+
+          return ListView.builder(
             padding: const EdgeInsets.all(16),
-            children: [
-              Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    TextFormField(
-                      controller: _nomePetCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Nome do pet',
-                        prefixIcon: Icon(Icons.pets),
-                      ),
-                      validator: _controller.validarNomePet,
-                    ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<String>(
-                      initialValue: _servico,
-                      decoration: const InputDecoration(
-                        labelText: 'Serviço',
-                        prefixIcon: Icon(Icons.medical_services_outlined),
-                      ),
-                      items: AgendarController.servicos
-                          .map(
-                            (s) => DropdownMenuItem(value: s, child: Text(s)),
-                          )
-                          .toList(),
-                      onChanged: (v) => setState(() => _servico = v),
-                      validator: _controller.validarServico,
-                    ),
-                    const SizedBox(height: 12),
-                    OutlinedButton.icon(
-                      onPressed: _escolherData,
-                      icon: const Icon(Icons.calendar_month),
-                      label: Text(
-                        _data == null
-                            ? 'Escolha a data (segunda a sexta)'
-                            : _rotuloData(_data!),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    _secaoHorarios(),
-                    if (_erroDataHora != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 6, left: 12),
-                        child: Text(
-                          _erroDataHora!,
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.error,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _obsCtrl,
-                      maxLines: 2,
-                      decoration: const InputDecoration(
-                        labelText: 'Observação (opcional)',
-                        prefixIcon: Icon(Icons.notes),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    FilledButton.icon(
-                      onPressed: _enviar,
-                      icon: const Icon(Icons.event_available),
-                      label: const Text('Agendar'),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Meus agendamentos',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
-              if (lista.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 24),
-                  child: Center(child: Text('Nenhum agendamento ainda')),
-                )
-              else
-                ...lista.map(
-                  (a) => Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.event, color: AppCores.coral),
-                      title: Text('${a.servico} • ${a.nomePet}'),
-                      subtitle: Text(
-                        '${_formatarData(a.dataHora)} às '
-                        '${_formatarHora(TimeOfDay.fromDateTime(a.dataHora))}'
-                        '${a.observacao.isEmpty ? '' : '\n${a.observacao}'}',
-                      ),
-                      isThreeLine: a.observacao.isNotEmpty,
-                      trailing: IconButton(
-                        tooltip: 'Cancelar',
-                        icon: const Icon(Icons.delete_outline),
-                        onPressed: () => _controller.cancelar(a.id),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
+            itemCount: 1 + quantidade,
+            itemBuilder: (context, i) {
+              if (i == 0) return _formulario(lista);
+              if (aviso != null) return aviso;
+              return _cartaoAgendamento(lista[i - 1]);
+            },
           );
         },
       ),
@@ -208,7 +283,7 @@ class _AgendarViewState extends State<AgendarView> {
   }
 
   /// Grade de horários fixos do dia escolhido.
-  Widget _secaoHorarios() {
+  Widget _secaoHorarios(List<AgendamentoModel> meus) {
     if (_data == null) {
       return Container(
         padding: const EdgeInsets.all(14),
@@ -256,7 +331,7 @@ class _AgendarViewState extends State<AgendarView> {
                 ...AgendarController.horariosManha,
                 ...AgendarController.horariosTarde,
               ])
-                _chipHorario(h),
+                _chipHorario(h, meus),
             ],
           ),
         ),
@@ -264,8 +339,8 @@ class _AgendarViewState extends State<AgendarView> {
     );
   }
 
-  Widget _chipHorario(TimeOfDay horario) {
-    final indisponivel = _controller.horarioIndisponivel(_data!, horario);
+  Widget _chipHorario(TimeOfDay horario, List<AgendamentoModel> meus) {
+    final indisponivel = _controller.horarioIndisponivel(_data!, horario, meus);
     final selecionado = !indisponivel && _hora == horario;
 
     return Container(

@@ -1,7 +1,14 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../model/agendamento_model.dart';
 
+/// Estado e regras da funcionalidade "Agendar".
+///
+/// Grava na coleção `agendamentos` do Firestore, com o `uid` do dono, e expõe
+/// os agendamentos do usuário logado em tempo real (`streamAgendamentos`).
+/// As regras do Firestore só deixam cada usuário acessar os próprios dados.
 class AgendarController extends ChangeNotifier {
   static const List<String> servicos = [
     'Consulta veterinária',
@@ -21,13 +28,39 @@ class AgendarController extends ChangeNotifier {
     });
   }
 
-  final List<AgendamentoModel> _agendamentos = [];
+  static const _limite = Duration(seconds: 10);
 
-  /// Ordenados do mais próximo para o mais distante.
-  List<AgendamentoModel> get agendamentos {
-    final copia = List<AgendamentoModel>.from(_agendamentos);
-    copia.sort((a, b) => a.dataHora.compareTo(b.dataHora));
-    return List.unmodifiable(copia);
+  final CollectionReference<Map<String, dynamic>> _colecao =
+      FirebaseFirestore.instance.collection('agendamentos');
+
+  String? get _uid => FirebaseAuth.instance.currentUser?.uid;
+
+  /// Agendamentos do usuário logado, em tempo real, do mais próximo para o
+  /// mais distante. Filtra só por `uid` (não exige índice composto) e ordena
+  /// aqui.
+  Stream<List<AgendamentoModel>> streamAgendamentos() {
+    final uid = _uid;
+    if (uid == null) return Stream.error('Sessão expirada. Entre novamente.');
+
+    return _colecao.where('uid', isEqualTo: uid).snapshots().map((snap) {
+      final lista = snap.docs.map(_paraAgendamento).toList()
+        ..sort((a, b) => a.dataHora.compareTo(b.dataHora));
+      return lista;
+    });
+  }
+
+  AgendamentoModel _paraAgendamento(
+    QueryDocumentSnapshot<Map<String, dynamic>> doc,
+  ) {
+    final dados = doc.data();
+    return AgendamentoModel(
+      id: doc.id,
+      nomePet: (dados['nomePet'] as String?) ?? '',
+      servico: (dados['servico'] as String?) ?? '',
+      dataHora:
+          ((dados['dataHora'] as Timestamp?) ?? Timestamp.now()).toDate(),
+      observacao: (dados['observacao'] as String?) ?? '',
+    );
   }
 
   /// A clínica só atende de segunda a sexta.
@@ -44,15 +77,20 @@ class AgendarController extends ChangeNotifier {
   }
 
   /// Horário indisponível: já passou, já foi agendado por você
-  /// ou está ocupado por outro cliente (simulado para a demonstração).
-  bool horarioIndisponivel(DateTime dia, TimeOfDay hora) {
+  /// (lista [meus], vinda do Firestore) ou está ocupado por outro cliente
+  /// (simulado para a demonstração).
+  bool horarioIndisponivel(
+    DateTime dia,
+    TimeOfDay hora,
+    List<AgendamentoModel> meus,
+  ) {
     final inicio = combinar(dia, hora);
     if (!inicio.isAfter(DateTime.now())) return true;
     if (_ocupadoPorOutros(dia, hora)) return true;
-    return _agendamentos.any((a) => a.dataHora.isAtSameMomentAs(inicio));
+    return meus.any((a) => a.dataHora.isAtSameMomentAs(inicio));
   }
 
-  // Simula agendamentos de outros clientes (cerca de 1 horário em cada 4).
+  // Simula agendamentos de outros clientes (cerca de 1 horário em cada 6).
   bool _ocupadoPorOutros(DateTime dia, TimeOfDay hora) {
     final indice = (hora.hour * 60 + hora.minute - 8 * 60) ~/ 30;
     return (dia.day + dia.month + indice) % 6 == 0;
@@ -83,27 +121,49 @@ class AgendarController extends ChangeNotifier {
   DateTime combinar(DateTime data, TimeOfDay hora) =>
       DateTime(data.year, data.month, data.day, hora.hour, hora.minute);
 
-  void agendar({
+  /// RF003: insere o agendamento. Retorna `null` se deu certo, ou a mensagem
+  /// de erro.
+  Future<String?> agendar({
     required String nomePet,
     required String servico,
     required DateTime data,
     required TimeOfDay hora,
     String observacao = '',
-  }) {
-    _agendamentos.add(
-      AgendamentoModel(
-        id: DateTime.now().microsecondsSinceEpoch.toString(),
-        nomePet: nomePet.trim(),
-        servico: servico,
-        dataHora: combinar(data, hora),
-        observacao: observacao.trim(),
-      ),
-    );
-    notifyListeners();
+  }) async {
+    final uid = _uid;
+    if (uid == null) return 'Sessão expirada. Entre novamente.';
+
+    try {
+      await _colecao.add({
+        'uid': uid,
+        'nomePet': nomePet.trim(),
+        'servico': servico,
+        'dataHora': Timestamp.fromDate(combinar(data, hora)),
+        'observacao': observacao.trim(),
+        'criadoEm': FieldValue.serverTimestamp(),
+      }).timeout(_limite);
+      return null;
+    } on FirebaseException catch (e) {
+      debugPrint('Falha ao salvar agendamento: ${e.code} ${e.message}');
+      if (e.code == 'permission-denied') {
+        return 'Sem permissão para salvar. Entre novamente.';
+      }
+      return 'Não foi possível agendar. Tente novamente.';
+    } catch (e) {
+      debugPrint('Falha ao salvar agendamento: $e');
+      return 'Não foi possível agendar. Verifique a conexão e tente '
+          'novamente.';
+    }
   }
 
-  void cancelar(String id) {
-    _agendamentos.removeWhere((a) => a.id == id);
-    notifyListeners();
+  /// Cancela o agendamento. Retorna `null` se deu certo, ou a mensagem de erro.
+  Future<String?> cancelar(String id) async {
+    try {
+      await _colecao.doc(id).delete().timeout(_limite);
+      return null;
+    } catch (e) {
+      debugPrint('Falha ao cancelar agendamento: $e');
+      return 'Não foi possível cancelar o agendamento. Tente novamente.';
+    }
   }
 }
