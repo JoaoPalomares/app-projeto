@@ -6,6 +6,9 @@ import '../core/app_tema.dart';
 import '../core/dependencias.dart';
 import '../core/telefone_input_formatter.dart';
 import 'componentes/componentes_auth.dart';
+import '../model/usuario_model.dart';
+import '../core/cnpj.dart';
+import '../core/estados.dart';
 
 class CadastrarUsuarioView extends StatefulWidget {
   const CadastrarUsuarioView({super.key});
@@ -22,6 +25,11 @@ class _CadastrarUsuarioViewState extends State<CadastrarUsuarioView> {
   final _telefoneController = TextEditingController();
   final _senhaController = TextEditingController();
   final _confirmacaoController = TextEditingController();
+  final _cidadeController = TextEditingController();
+  final _cnpjController = TextEditingController();
+  final _descricaoController = TextEditingController();
+  String? _estado;
+  String _tipo = Usuario.tipoAdotante;
 
   @override
   void initState() {
@@ -36,6 +44,9 @@ class _CadastrarUsuarioViewState extends State<CadastrarUsuarioView> {
     _telefoneController.dispose();
     _senhaController.dispose();
     _confirmacaoController.dispose();
+    _cidadeController.dispose();
+    _cnpjController.dispose();
+    _descricaoController.dispose();
     super.dispose();
   }
 
@@ -45,20 +56,23 @@ class _CadastrarUsuarioViewState extends State<CadastrarUsuarioView> {
     // Campos obrigatórios, e-mail válido e senhas iguais.
     if (!_formKey.currentState!.validate()) return;
 
+    final ehOng = _tipo == Usuario.tipoOng;
+
     final criado = await _controller.cadastrar(
       nome: _nomeController.text,
       email: _emailController.text,
       telefone: _telefoneController.text,
       senha: _senhaController.text,
+      tipo: _tipo,
+      cidade: ehOng ? _cidadeController.text : '',
+      estado: ehOng ? (_estado ?? '') : '',
+      descricao: ehOng ? _descricaoController.text : '',
+      cnpj: ehOng ? _cnpjController.text : '',
     );
 
     // Conta criada: o usuário já entra no app.
     if (criado && mounted) {
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        AppRoutes.home,
-        (_) => false,
-      );
+      Navigator.pushNamedAndRemoveUntil(context, AppRoutes.home, (_) => false);
     }
   }
 
@@ -101,15 +115,42 @@ class _CadastrarUsuarioViewState extends State<CadastrarUsuarioView> {
                         style: TextStyle(color: AppCores.textoSuave),
                       ),
                       const SizedBox(height: 28),
+                      SegmentedButton<String>(
+                        showSelectedIcon: false,
+                        style: SegmentedButton.styleFrom(
+                          selectedBackgroundColor: AppCores.coral,
+                          selectedForegroundColor: Colors.white,
+                        ),
+                        segments: const [
+                          ButtonSegment(
+                            value: Usuario.tipoAdotante,
+                            label: Text('Quero adotar'),
+                            icon: Icon(Icons.favorite_border),
+                          ),
+                          ButtonSegment(
+                            value: Usuario.tipoOng,
+                            label: Text('Sou uma ONG'),
+                            icon: Icon(Icons.volunteer_activism_outlined),
+                          ),
+                        ],
+                        selected: {_tipo},
+                        onSelectionChanged: (escolha) =>
+                            setState(() => _tipo = escolha.first),
+                      ),
+                      const SizedBox(height: 16),
                       TextFormField(
                         controller: _nomeController,
                         textCapitalization: TextCapitalization.words,
                         textInputAction: TextInputAction.next,
                         validator: _controller.validarNome,
-                        decoration: const InputDecoration(
-                          labelText: 'Nome completo',
-                          hintText: 'João Silva',
-                          prefixIcon: Icon(Icons.person_outline),
+                        decoration: InputDecoration(
+                          labelText: _tipo == Usuario.tipoOng
+                              ? 'Nome da ONG'
+                              : 'Nome completo',
+                          hintText: _tipo == Usuario.tipoOng
+                              ? 'ONG Amigos dos Bichos'
+                              : 'João Silva',
+                          prefixIcon: const Icon(Icons.person_outline),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -138,6 +179,83 @@ class _CadastrarUsuarioViewState extends State<CadastrarUsuarioView> {
                         ),
                       ),
                       const SizedBox(height: 16),
+                      if (_tipo == Usuario.tipoOng) ...[
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              flex: 3,
+                              child: TextFormField(
+                                controller: _cidadeController,
+                                textCapitalization: TextCapitalization.words,
+                                textInputAction: TextInputAction.next,
+                                autovalidateMode:
+                                    AutovalidateMode.onUserInteraction,
+                                validator: _controller.validarCidade,
+                                decoration: const InputDecoration(
+                                  labelText: 'Cidade',
+                                  prefixIcon: Icon(
+                                    Icons.location_city_outlined,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              flex: 2,
+                              child: DropdownButtonFormField<String>(
+                                initialValue: _estado,
+                                isExpanded: true,
+                                autovalidateMode:
+                                    AutovalidateMode.onUserInteraction,
+                                validator: _controller.validarEstado,
+                                decoration: const InputDecoration(
+                                  labelText: 'UF',
+                                ),
+                                items: [
+                                  for (final uf in estadosBrasil)
+                                    DropdownMenuItem(
+                                      value: uf,
+                                      child: Text(uf),
+                                    ),
+                                ],
+                                onChanged: (valor) =>
+                                    setState(() => _estado = valor),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _cnpjController,
+                          keyboardType: TextInputType.number,
+                          textInputAction: TextInputAction.next,
+                          inputFormatters: [CnpjInputFormatter()],
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
+                          validator: _controller.validarCnpj,
+                          decoration: const InputDecoration(
+                            labelText: 'CNPJ',
+                            hintText: '00.000.000/0000-00',
+                            prefixIcon: Icon(Icons.badge_outlined),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _descricaoController,
+                          minLines: 3,
+                          maxLines: 4,
+                          maxLength: 300,
+                          textCapitalization: TextCapitalization.sentences,
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
+                          validator: _controller.validarDescricao,
+                          decoration: const InputDecoration(
+                            labelText: 'Sobre a ONG',
+                            hintText: 'Conte brevemente o trabalho de vocês',
+                            alignLabelWithHint: true,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
                       TextFormField(
                         controller: _senhaController,
                         obscureText: _controller.ocultarSenha,

@@ -47,9 +47,12 @@ class Animal {
     this.vacinado = false,
     this.castrado = false,
     this.imagem,
+    this.fotoUrl,
+    this.ongUid,
   });
 
-  final int id;
+  /// Id do documento no Firestore.
+  final String id;
   final String nome;
   final Especie especie;
   final String raca;
@@ -62,8 +65,52 @@ class Animal {
   final bool vacinado;
   final bool castrado;
 
-  /// Caminho de uma foto em assets (opcional). Sem foto, a tela usa um ícone.
+  /// Caminho de uma foto em assets (usado só nos exemplos locais).
   final String? imagem;
+
+  /// Link de uma foto na internet, informado pela ONG.
+  final String? fotoUrl;
+
+  /// uid da ONG que cadastrou o animal.
+  final String? ongUid;
+
+  /// Monta o animal a partir de um documento da coleção `animais`.
+  factory Animal.fromMap(String id, Map<String, dynamic> dados) {
+    final foto = dados['fotoUrl'] as String?;
+
+    return Animal(
+      id: id,
+      nome: dados['nome'] as String? ?? '',
+      especie: Especie.values.asNameMap()[dados['especie']] ?? Especie.cachorro,
+      raca: dados['raca'] as String? ?? '',
+      idadeMeses: (dados['idadeMeses'] as num?)?.toInt() ?? 0,
+      porte: Porte.values.asNameMap()[dados['porte']] ?? Porte.medio,
+      sexo: Sexo.values.asNameMap()[dados['sexo']] ?? Sexo.macho,
+      cidade: dados['cidade'] as String? ?? '',
+      ong: dados['ong'] as String? ?? '',
+      descricao: dados['descricao'] as String? ?? '',
+      vacinado: dados['vacinado'] as bool? ?? false,
+      castrado: dados['castrado'] as bool? ?? false,
+      fotoUrl: (foto == null || foto.isEmpty) ? null : foto,
+      ongUid: dados['ongUid'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+        'nome': nome,
+        'especie': especie.name,
+        'raca': raca,
+        'idadeMeses': idadeMeses,
+        'porte': porte.name,
+        'sexo': sexo.name,
+        'cidade': cidade,
+        'ong': ong,
+        'descricao': descricao,
+        'vacinado': vacinado,
+        'castrado': castrado,
+        'fotoUrl': fotoUrl,
+        'ongUid': ongUid,
+      };
 
   FaixaEtaria get faixaEtaria {
     if (idadeMeses < 12) return FaixaEtaria.filhote;

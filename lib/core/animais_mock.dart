@@ -5,7 +5,7 @@ import '../model/animal_model.dart';
 /// `imagem: 'assets/images/mel.png'` no animal.
 const List<Animal> animaisMock = [
   Animal(
-    id: 1,
+    id: '1',
     nome: 'Mel',
     especie: Especie.cachorro,
     raca: 'SRD (Sem Raça Definida)',
@@ -21,7 +21,7 @@ const List<Animal> animaisMock = [
     imagem: 'assets/images/pets/cachorro-caramelo.webp',
   ),
   Animal(
-    id: 2,
+    id: '2',
     nome: 'Thor',
     especie: Especie.cachorro,
     raca: 'Labrador',
@@ -36,7 +36,7 @@ const List<Animal> animaisMock = [
     imagem: 'assets/images/pets/labrador.webp',
   ),
   Animal(
-    id: 3,
+    id: '3',
     nome: 'Luna',
     especie: Especie.gato,
     raca: 'Siamês',
@@ -52,7 +52,7 @@ const List<Animal> animaisMock = [
     imagem: 'assets/images/pets/gato-siames.webp',
   ),
   Animal(
-    id: 4,
+    id: '4',
     nome: 'Bolinha',
     especie: Especie.cachorro,
     raca: 'Poodle',
@@ -68,7 +68,7 @@ const List<Animal> animaisMock = [
     imagem: 'assets/images/pets/poodle.jpg',
   ),
   Animal(
-    id: 5,
+    id: '5',
     nome: 'Simba',
     especie: Especie.gato,
     raca: 'SRD (Sem Raça Definida)',
@@ -83,7 +83,7 @@ const List<Animal> animaisMock = [
     imagem: 'assets/images/pets/gato-sem-raca.jpg',
   ),
   Animal(
-    id: 6,
+    id: '6',
     nome: 'Princesa',
     especie: Especie.cachorro,
     raca: 'Golden Retriever',
@@ -99,7 +99,7 @@ const List<Animal> animaisMock = [
     imagem: 'assets/images/pets/golden-retriever.webp',
   ),
   Animal(
-    id: 7,
+    id: '7',
     nome: 'Max',
     especie: Especie.cachorro,
     raca: 'Pastor Alemão',
@@ -115,7 +115,7 @@ const List<Animal> animaisMock = [
     imagem: 'assets/images/pets/pastor-alemao.jpg',
   ),
   Animal(
-    id: 8,
+    id: '8',
     nome: 'Mimi',
     especie: Especie.gato,
     raca: 'Persa',

@@ -5,6 +5,7 @@ import '../controller/triagem_controller.dart';
 import '../core/app_tema.dart';
 import '../core/telefone_input_formatter.dart';
 import '../model/animal_model.dart';
+import 'componentes/foto_animal.dart';
 
 class TriagemView extends StatelessWidget {
   const TriagemView({super.key});
@@ -12,8 +13,18 @@ class TriagemView extends StatelessWidget {
   Future<void> _enviar(BuildContext context) async {
     FocusScope.of(context).unfocus();
 
-    final solicitacao = await context.read<TriagemController>().enviar();
-    if (solicitacao == null || !context.mounted) return;
+    final controller = context.read<TriagemController>();
+    final solicitacao = await controller.enviar();
+    if (!context.mounted) return;
+
+    if (solicitacao == null) {
+      final erro = controller.erro;
+      if (erro != null) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(erro)));
+      }
+      return;
+    }
 
     await showDialog<void>(
       context: context,
@@ -66,10 +77,7 @@ class TriagemView extends StatelessWidget {
                     const Text(
                       'Para garantir o bem-estar do animal, precisamos '
                       'conhecer um pouco mais sobre você e sua casa.',
-                      style: TextStyle(
-                        color: AppCores.textoSuave,
-                        height: 1.4,
-                      ),
+                      style: TextStyle(color: AppCores.textoSuave, height: 1.4),
                     ),
                     const SizedBox(height: 24),
                     const _TituloSecao('Seus dados'),
@@ -86,12 +94,15 @@ class TriagemView extends StatelessWidget {
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: controller.emailController,
+                      readOnly: true,
                       keyboardType: TextInputType.emailAddress,
                       textInputAction: TextInputAction.next,
                       validator: controller.validarEmail,
                       decoration: const InputDecoration(
                         labelText: 'E-mail',
-                        hintText: 'seu@email.com',
+                        helperText: 'Vem da sua conta e não pode ser alterado.',
+                        suffixIcon: Icon(Icons.lock_outline),
+                        fillColor: Color(0xFFF3F4F6),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -157,9 +168,34 @@ class TriagemView extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 28),
+                    const Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          size: 18,
+                          color: AppCores.textoSuave,
+                        ),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Ao enviar, seus dados de contato e suas respostas '
+                            'serão compartilhados com a ONG responsável pelo '
+                            'animal.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppCores.textoSuave,
+                              height: 1.4,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
                     FilledButton(
-                      onPressed:
-                          controller.enviando ? null : () => _enviar(context),
+                      onPressed: controller.enviando
+                          ? null
+                          : () => _enviar(context),
                       child: controller.enviando
                           ? const SizedBox(
                               width: 22,
@@ -205,8 +241,6 @@ class _ResumoAnimal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final gato = animal.especie == Especie.gato;
-
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -221,21 +255,7 @@ class _ResumoAnimal extends StatelessWidget {
             child: SizedBox(
               width: 72,
               height: 72,
-              child: Image.asset(
-                animal.imagem!,
-                fit: BoxFit.cover,
-                semanticLabel: 'Foto de ${animal.nome}',
-                // Se a foto não carregar, mostra o ícone como antes.
-                errorBuilder: (context, error, stackTrace) => Container(
-                  color: gato
-                      ? const Color(0xFFD9F2EF)
-                      : const Color(0xFFFBE3DC),
-                  child: Icon(
-                    Icons.pets,
-                    color: gato ? AppCores.verde : AppCores.coral,
-                  ),
-                ),
-              ),
+              child: FotoAnimal(animal: animal, tamanhoIcone: 28),
             ),
           ),
           const SizedBox(width: 12),

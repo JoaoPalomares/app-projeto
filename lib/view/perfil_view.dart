@@ -5,6 +5,7 @@ import '../controller/perfil_controller.dart';
 import '../core/app_routes.dart';
 import '../core/app_tema.dart';
 import '../core/dependencias.dart';
+import 'minhas_solicitacoes_view.dart';
 
 class PerfilView extends StatefulWidget {
   const PerfilView({super.key});
@@ -66,11 +67,7 @@ class _PerfilViewState extends State<PerfilView> {
 
   void _sair() {
     _auth.logout();
-    Navigator.pushNamedAndRemoveUntil(
-      context,
-      AppRoutes.login,
-      (_) => false,
-    );
+    Navigator.pushNamedAndRemoveUntil(context, AppRoutes.login, (_) => false);
   }
 
   @override
@@ -202,19 +199,33 @@ class _PerfilViewState extends State<PerfilView> {
 
                     const SizedBox(height: 16),
                     const Divider(),
+                    if (!usuario.ehOng)
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.assignment_outlined),
+                        title: const Text('Minhas solicitações'),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute<void>(
+                            builder: (_) => const MinhasSolicitacoesView(),
+                          ),
+                        ),
+                      ),
                     ListTile(
                       contentPadding: EdgeInsets.zero,
                       leading: const Icon(Icons.info_outline),
                       title: const Text('Sobre o Miaudote'),
                       trailing: const Icon(Icons.chevron_right),
-                      onTap: () => Navigator.pushNamed(
-                        context,
-                        AppRoutes.sobre,
-                      ),
+                      onTap: () =>
+                          Navigator.pushNamed(context, AppRoutes.sobre),
                     ),
                     ListTile(
                       contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.logout, color: Colors.redAccent),
+                      leading: const Icon(
+                        Icons.logout,
+                        color: Colors.redAccent,
+                      ),
                       title: const Text(
                         'Sair da conta',
                         style: TextStyle(color: Colors.redAccent),

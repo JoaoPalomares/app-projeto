@@ -1,35 +1,26 @@
 import 'package:flutter/material.dart';
 
-import '../core/animais_mock.dart';
 import '../model/animal_model.dart';
 import '../model/filtro_adocao_model.dart';
 
 /// Estado e regras do Portal de Adoção (RF04).
 class AdocaoController extends ChangeNotifier {
-  final List<Animal> _animais = animaisMock;
-
   final buscaController = TextEditingController();
 
   FiltroAdocao _filtro = const FiltroAdocao();
   String _busca = '';
 
-  /// Texto pesquisável de cada animal (nome, espécie e raça), já sem acento.
-  /// Montado uma vez só, em vez de a cada letra digitada.
-  late final Map<int, String> _indiceBusca = {
-    for (final animal in _animais) animal.id: _textoPesquisavel(animal),
-  };
-
   FiltroAdocao get filtro => _filtro;
   int get quantidadeFiltros => _filtro.quantidadeAtiva;
 
-  /// Lista já filtrada pela busca e pelos filtros aplicados.
-  List<Animal> get animaisFiltrados {
+  /// Aplica a busca e os filtros à lista que chegou do Firestore.
+  List<Animal> filtrar(List<Animal> animais) {
     final palavras = _palavrasDaBusca(_busca);
     final cidade = _normalizar(_filtro.cidade);
 
-    return _animais.where((animal) {
+    return animais.where((animal) {
       if (palavras.isNotEmpty) {
-        final texto = _indiceBusca[animal.id]!;
+        final texto = _textoPesquisavel(animal);
         // Todas as palavras digitadas precisam aparecer (ex.: "gato siames").
         if (!palavras.every(texto.contains)) return false;
       }
@@ -55,8 +46,6 @@ class AdocaoController extends ChangeNotifier {
     }).toList();
   }
 
-  /// Busca por nome, espécie ou raça (o nome do método foi mantido para a
-  /// view continuar funcionando sem alterações).
   void buscarPorNome(String texto) {
     _busca = texto;
     notifyListeners();

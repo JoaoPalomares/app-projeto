@@ -53,6 +53,9 @@ class AuthController extends ChangeNotifier {
       nome: (dados?['nome'] as String?) ?? user.displayName ?? '',
       email: user.email ?? '',
       telefone: (dados?['telefone'] as String?) ?? '',
+      tipo: (dados?['tipo'] as String?) ?? Usuario.tipoAdotante,
+      cidade: (dados?['cidade'] as String?) ?? '',
+      estado: (dados?['estado'] as String?) ?? '',
     );
   }
 
@@ -113,21 +116,30 @@ class AuthController extends ChangeNotifier {
     final doc = await ref.get().timeout(_limite);
     if (doc.exists) return;
 
-    await ref.set({
-      'uid': user.uid,
-      'nome': user.displayName ?? '',
-      'email': user.email ?? '',
-      'telefone': '',
-      'criadoEm': FieldValue.serverTimestamp(),
-    }).timeout(_limite);
+    await ref
+        .set({
+          'uid': user.uid,
+          'nome': user.displayName ?? '',
+          'email': user.email ?? '',
+          'telefone': '',
+          'criadoEm': FieldValue.serverTimestamp(),
+          'tipo': Usuario.tipoAdotante,
+        })
+        .timeout(_limite);
   }
 
   /// RF002: cria a conta no Authentication e grava os dados em `usuarios`.
+  /// Cidade, estado, descrição e CNPJ só são gravados para contas de ONG.
   Future<String?> cadastrar({
     required String nome,
     required String email,
     required String telefone,
     required String senha,
+    String tipo = Usuario.tipoAdotante,
+    String cidade = '',
+    String estado = '',
+    String descricao = '',
+    String cnpj = '',
   }) async {
     User? novo;
     try {
@@ -137,26 +149,39 @@ class AuthController extends ChangeNotifier {
       );
       novo = cred.user!;
 
-      await _docUsuario(novo.uid).set({
-        'uid': novo.uid,
-        'nome': nome.trim(),
-        'email': email.trim(),
-        'telefone': telefone.trim(),
-        'criadoEm': FieldValue.serverTimestamp(),
-      }).timeout(_limite);
+      final ehOng = tipo == Usuario.tipoOng;
+
+      await _docUsuario(novo.uid)
+          .set({
+            'uid': novo.uid,
+            'nome': nome.trim(),
+            'email': email.trim(),
+            'telefone': telefone.trim(),
+            'tipo': tipo,
+            'criadoEm': FieldValue.serverTimestamp(),
+            if (ehOng) ...{
+              'cidade': cidade.trim(),
+              'estado': estado,
+              'descricao': descricao.trim(),
+              'cnpj': cnpj.trim(),
+            },
+          })
+          .timeout(_limite);
 
       _usuarioLogado = Usuario(
         uid: novo.uid,
         nome: nome.trim(),
         email: email.trim(),
         telefone: telefone.trim(),
+        tipo: tipo,
+        cidade: ehOng ? cidade.trim() : '',
+        estado: ehOng ? estado : '',
       );
       notifyListeners();
       return null;
     } on FirebaseAuthException catch (e) {
       return _mensagemErro(e);
-    } catch (e) {
-      debugPrint('Falha ao gravar usuarios/${novo?.uid} no cadastro: $e');
+    } catch (_) {
       // A conta chegou a ser criada, mas o perfil não foi salvo: desfaz a conta
       // para o usuário não ficar com um cadastro pela metade.
       try {
@@ -188,7 +213,8 @@ class AuthController extends ChangeNotifier {
 
     try {
       await _docUsuario(usuario.uid)
-          .update({'nome': nome.trim()}).timeout(_limite);
+          .update({'nome': nome.trim()})
+          .timeout(_limite);
       usuario.nome = nome.trim();
       notifyListeners();
       return null;

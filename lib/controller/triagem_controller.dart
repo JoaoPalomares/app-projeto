@@ -3,10 +3,18 @@ import 'package:flutter/material.dart';
 import '../core/validadores.dart';
 import '../model/animal_model.dart';
 import '../model/solicitacao_adocao_model.dart';
+import '../core/dependencias.dart';
+import 'auth_controller.dart';
+import 'solicitacoes_controller.dart';
 
 /// Estado e regras do formulário de triagem de adoção.
 class TriagemController extends ChangeNotifier {
-  TriagemController(this.animal);
+  TriagemController(this.animal) {
+    final usuario = g<AuthController>().usuarioLogado;
+    nomeController.text = usuario?.nome ?? '';
+    emailController.text = usuario?.email ?? '';
+    telefoneController.text = usuario?.telefone ?? '';
+  }
 
   /// Animal que o usuário quer adotar (recebido pela rota).
   final Animal animal;
@@ -51,6 +59,9 @@ class TriagemController extends ChangeNotifier {
 
   bool _enviando = false;
   bool _descartado = false;
+  
+  String? _erro;
+  String? get erro => _erro;
 
   bool get enviando => _enviando;
 
@@ -68,17 +79,17 @@ class TriagemController extends ChangeNotifier {
   String? validarMotivacao(String? valor) =>
       Validadores.tamanhoMinimo(valor, 10, campo: 'O motivo');
 
-  /// Valida o formulário e "envia" a solicitação.
-  /// Retorna a solicitação criada, ou `null` se algum campo for inválido.
+    /// Valida o formulário e grava a solicitação no Firestore.
+  /// Retorna a solicitação criada, ou `null` se algum campo for inválido
+  /// ou se o envio falhar (nesse caso, veja [erro]).
   Future<SolicitacaoAdocao?> enviar() async {
+    _erro = null;
+
     final formularioValido = formKey.currentState?.validate() ?? false;
     if (!formularioValido) return null;
 
     _enviando = true;
     notifyListeners();
-
-    // Simula o envio para a API (nesta etapa nada é gravado em servidor).
-    await Future.delayed(const Duration(milliseconds: 800));
 
     final solicitacao = SolicitacaoAdocao(
       animal: animal,
@@ -93,9 +104,12 @@ class TriagemController extends ChangeNotifier {
       motivacao: motivacaoController.text.trim(),
     );
 
+    final erro = await g<SolicitacoesController>().enviar(solicitacao);
+
     _enviando = false;
+    _erro = erro;
     notifyListeners();
-    return solicitacao;
+    return erro == null ? solicitacao : null;
   }
 
   @override

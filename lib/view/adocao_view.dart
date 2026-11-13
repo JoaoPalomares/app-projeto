@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../controller/auth_controller.dart';
 import '../core/dependencias.dart';
 import '../controller/adocao_controller.dart';
@@ -7,9 +8,25 @@ import '../core/app_routes.dart';
 import '../core/app_tema.dart';
 import '../model/animal_model.dart';
 import 'adocao_filtros_sheet.dart';
+import '../controller/animais_controller.dart';
+import 'componentes/foto_animal.dart';
 
-class AdocaoView extends StatelessWidget {
+class AdocaoView extends StatefulWidget {
   const AdocaoView({super.key});
+
+  @override
+  State<AdocaoView> createState() => _AdocaoViewState();
+}
+
+class _AdocaoViewState extends State<AdocaoView> {
+  late Stream<List<Animal>> _stream = g<AnimaisController>().todos();
+
+  // Contas de ONG só visualizam: o botão de adotar fica oculto.
+  final bool _podeAdotar = !(g<AuthController>().usuarioLogado?.ehOng ?? false);
+
+  void _tentarNovamente() {
+    setState(() => _stream = g<AnimaisController>().todos());
+  }
 
   void _abrirFiltros(BuildContext context) {
     final controller = context.read<AdocaoController>();
@@ -32,15 +49,17 @@ class AdocaoView extends StatelessWidget {
       showDragHandle: true,
       builder: (sheetContext) => _DetalhesAnimal(
         animal: animal,
-        onAdotar: () {
-          Navigator.pop(sheetContext);
-          _querAdotar(context, animal);
-        },
+        onAdotar: _podeAdotar
+            ? () {
+                Navigator.pop(sheetContext);
+                _querAdotar(context, animal);
+              }
+            : null,
       ),
     );
   }
 
-  /// Leva para a tela de triagem (próxima funcionalidade), enviando o animal.
+  /// Leva para a tela de triagem, enviando o animal.
   void _querAdotar(BuildContext context, Animal animal) {
     Navigator.pushNamed(context, AppRoutes.triagem, arguments: animal);
   }
@@ -48,8 +67,6 @@ class AdocaoView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = context.watch<AdocaoController>();
-    final animais = controller.animaisFiltrados;
-    final total = animais.length;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Portal de Adoção')),
@@ -89,43 +106,72 @@ class AdocaoView extends StatelessWidget {
               ],
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                total == 1
-                    ? '1 pet disponível para adoção'
-                    : '$total pets disponíveis para adoção',
-                style: const TextStyle(
-                  color: AppCores.verde,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
           Expanded(
-            child: animais.isEmpty
-                ? _SemResultados(onLimpar: controller.limparFiltros)
-                : GridView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                    gridDelegate:
-                        const SliverGridDelegateWithMaxCrossAxisExtent(
-                      maxCrossAxisExtent: 240,
-                      mainAxisExtent: 350,
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
+            // RF004: lista em tempo real, com erro e nova tentativa.
+            child: StreamBuilder<List<Animal>>(
+              stream: _stream,
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return _ErroCarregar(onTentar: _tentarNovamente);
+                }
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final animais = controller.filtrar(snapshot.data!);
+                final total = animais.length;
+
+                return Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          total == 1
+                              ? '1 pet disponível para adoção'
+                              : '$total pets disponíveis para adoção',
+                          style: const TextStyle(
+                            color: AppCores.verde,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
                     ),
-                    itemCount: animais.length,
-                    itemBuilder: (context, index) {
-                      final animal = animais[index];
-                      return _CardAnimal(
-                        animal: animal,
-                        onTap: () => _abrirDetalhes(context, animal),
-                        onAdotar: () => _querAdotar(context, animal),
-                      );
-                    },
-                  ),
+                    Expanded(
+                      child: animais.isEmpty
+                          ? _SemResultados(onLimpar: controller.limparFiltros)
+                          : GridView.builder(
+                              padding: EdgeInsets.fromLTRB(
+                                16,
+                                4,
+                                16,
+                                MediaQuery.paddingOf(context).bottom + 24,
+                              ),
+                              gridDelegate:
+                                  const SliverGridDelegateWithMaxCrossAxisExtent(
+                                    maxCrossAxisExtent: 240,
+                                    mainAxisExtent: 350,
+                                    mainAxisSpacing: 12,
+                                    crossAxisSpacing: 12,
+                                  ),
+                              itemCount: animais.length,
+                              itemBuilder: (context, index) {
+                                final animal = animais[index];
+                                return _CardAnimal(
+                                  animal: animal,
+                                  onTap: () => _abrirDetalhes(context, animal),
+                                  onAdotar: _podeAdotar
+                                      ? () => _querAdotar(context, animal)
+                                      : null,
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -133,16 +179,49 @@ class AdocaoView extends StatelessWidget {
   }
 }
 
+class _ErroCarregar extends StatelessWidget {
+  const _ErroCarregar({required this.onTentar});
+
+  final VoidCallback onTentar;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.cloud_off, size: 64, color: AppCores.borda),
+            const SizedBox(height: 12),
+            const Text(
+              'Não foi possível carregar os animais',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Verifique sua conexão e tente de novo.',
+              style: TextStyle(color: AppCores.textoSuave),
+            ),
+            const SizedBox(height: 12),
+            FilledButton(
+              onPressed: onTentar,
+              child: const Text('Tentar novamente'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _CardAnimal extends StatelessWidget {
-  const _CardAnimal({
-    required this.animal,
-    required this.onTap,
-    required this.onAdotar,
-  });
+  const _CardAnimal({required this.animal, required this.onTap, this.onAdotar});
 
   final Animal animal;
   final VoidCallback onTap;
-  final VoidCallback onAdotar;
+  final VoidCallback? onAdotar;
 
   @override
   Widget build(BuildContext context) {
@@ -219,14 +298,16 @@ class _CardAnimal extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  FilledButton(
-                    onPressed: onAdotar,
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size.fromHeight(40),
+                  if (onAdotar != null) ...[
+                    const SizedBox(height: 12),
+                    FilledButton(
+                      onPressed: onAdotar,
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size.fromHeight(40),
+                      ),
+                      child: const Text('Quero adotar'),
                     ),
-                    child: const Text('Quero adotar'),
-                  ),
+                  ],
                 ],
               ),
             ),
@@ -237,7 +318,7 @@ class _CardAnimal extends StatelessWidget {
   }
 }
 
-/// Foto do animal. Sem imagem em assets, mostra um ícone de patinha.
+/// Foto do animal com o selo da espécie por cima.
 class _FotoAnimal extends StatelessWidget {
   const _FotoAnimal({required this.animal, this.tamanhoIcone = 48});
 
@@ -246,24 +327,10 @@ class _FotoAnimal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final gato = animal.especie == Especie.gato;
-
     return Stack(
       fit: StackFit.expand,
       children: [
-        if (animal.imagem != null)
-          Image.asset(animal.imagem!, fit: BoxFit.cover)
-        else
-          ColoredBox(
-            color: gato ? const Color(0xFFD9F2EF) : const Color(0xFFFBE3DC),
-            child: Center(
-              child: Icon(
-                Icons.pets,
-                size: tamanhoIcone,
-                color: gato ? AppCores.verde : AppCores.coral,
-              ),
-            ),
-          ),
+        FotoAnimal(animal: animal, tamanhoIcone: tamanhoIcone),
         Positioned(
           top: 8,
           left: 8,
@@ -352,10 +419,10 @@ class _Selo extends StatelessWidget {
 
 /// Perfil completo do animal, aberto ao tocar no card.
 class _DetalhesAnimal extends StatelessWidget {
-  const _DetalhesAnimal({required this.animal, required this.onAdotar});
+  const _DetalhesAnimal({required this.animal, this.onAdotar});
 
   final Animal animal;
-  final VoidCallback onAdotar;
+  final VoidCallback? onAdotar;
 
   @override
   Widget build(BuildContext context) {
@@ -388,7 +455,10 @@ class _DetalhesAnimal extends StatelessWidget {
             const SizedBox(height: 12),
             _SelosSaude(animal: animal),
             const SizedBox(height: 16),
-            _LinhaInfo(icone: Icons.cake_outlined, texto: animal.idadeFormatada),
+            _LinhaInfo(
+              icone: Icons.cake_outlined,
+              texto: animal.idadeFormatada,
+            ),
             _LinhaInfo(
               icone: animal.sexo == Sexo.macho ? Icons.male : Icons.female,
               texto: animal.sexo.rotulo,
@@ -397,22 +467,21 @@ class _DetalhesAnimal extends StatelessWidget {
               icone: Icons.straighten,
               texto: 'Porte ${animal.porte.rotulo.toLowerCase()}',
             ),
-            _LinhaInfo(
-              icone: Icons.location_on_outlined,
-              texto: animal.cidade,
-            ),
+            _LinhaInfo(icone: Icons.location_on_outlined, texto: animal.cidade),
             _LinhaInfo(
               icone: Icons.volunteer_activism_outlined,
               texto: 'Por ${animal.ong}',
             ),
             const SizedBox(height: 12),
             Text(animal.descricao, style: const TextStyle(height: 1.4)),
-            const SizedBox(height: 20),
-            FilledButton.icon(
-              onPressed: onAdotar,
-              icon: const Icon(Icons.favorite_border),
-              label: const Text('Quero adotar'),
-            ),
+                        if (onAdotar != null) ...[
+              const SizedBox(height: 20),
+              FilledButton.icon(
+                onPressed: onAdotar,
+                icon: const Icon(Icons.favorite_border),
+                label: const Text('Quero adotar'),
+              ),
+            ],
           ],
         ),
       ),
@@ -466,7 +535,10 @@ class _SemResultados extends StatelessWidget {
               style: TextStyle(color: AppCores.textoSuave),
             ),
             const SizedBox(height: 12),
-            TextButton(onPressed: onLimpar, child: const Text('Limpar filtros')),
+            TextButton(
+              onPressed: onLimpar,
+              child: const Text('Limpar filtros'),
+            ),
           ],
         ),
       ),
